@@ -13,6 +13,13 @@ The Huzzah then sends time information to the Altera board as follows:
 The Altera board processes this data, which is just three unsigned integers, and converts each to two, 4-bit outputs. For example, if hours = 15, the Altera board generates two new outputs, hours_1 and hours_0, each 4 bits wide. In this example, hours_1 = 1 and hours_0 = 5. 
 
 These six, 4-bit outputs are used to control CD4028 high-voltage decoders, which then control Nixi tubes.
+Altera FPGA Decoder Simulation Results:
+
+[[.pics/sim_results]]
+
+Altera FPGA Overall Simulation Results:
+
+[[.pics/main_DSP_sim]]
 
 And there you have it!
 
