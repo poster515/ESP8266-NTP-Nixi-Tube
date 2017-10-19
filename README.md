@@ -17,3 +17,5 @@ These six, 4-bit outputs are used to control CD4028 high-voltage decoders, which
 And there you have it!
 
 An NTP enabled Nixi Tube clock. 
+
+//TODO: will investigate spurious freezing of the Altera board.
