@@ -5,8 +5,8 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <Wire.h>
-
-#define FPGA_REGISTER 0x32 // Hexadecima address for the Altera FPGA internal register.
+#define ZEROES 0x00
+#define FPGA_REGISTER 0x1111111 // Hexadecima address for the Altera FPGA internal register.
 
 char ssid[] = "Never Rong";       //  your network SSID (name)
 char pass[] = "Sixty_2_Sixteen";    // your network password
@@ -19,7 +19,11 @@ int ESP8266_SCL = 5;
 int ESP8266_SDL = 4;
 
 //preamble for FPGA detection
-byte FPGA_ADDRESS = 0xFF;
+uint8_t FPGA_ADDRESS = 127; //0x1111111
+
+uint8_t hours_addr = 252; //0x11111100
+uint8_t min_addr = 253;   //0x11111101
+uint8_t sec_addr = 255;   //0x11111111
 
 /* Don't hardwire the IP address or we won't get the benefits of the pool.
  *  Lookup the IP address for the host name instead */
@@ -39,6 +43,8 @@ WiFiUDP udp;
 byte formattedHour;
 byte formattedMinute;
 byte formattedSecond;
+String h;
+byte zeroes = 0x00;
 
 void setup()
 {
@@ -51,8 +57,9 @@ void setup()
   Serial.println(ssid);
   WiFi.begin(ssid, pass);
   
-  Wire.begin(); // Initiate the Wire library
-  
+  Wire.begin(4, 5); // Initiate the Wire library
+  pinMode(5, OUTPUT);
+  pinMode(4, OUTPUT);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -81,8 +88,6 @@ void loop()
   byte formattedSecond = reformatSecond(unixTime);
   
   updateAltera(formattedHour, formattedMinute, formattedSecond);
-  
-  delay(500);
   
 }
 
@@ -114,17 +119,17 @@ unsigned long getTime(){
     // combine the four bytes (two words) into a long integer
     // this is NTP time (seconds since Jan 1 1900):
     unsigned long secsSince1900 = highWord << 16 | lowWord;
-    //Serial.print("Seconds since Jan 1 1900 = " );
-    //Serial.println(secsSince1900);
+//    Serial.print("Seconds since Jan 1 1900 = " );
+//    Serial.println(secsSince1900);
 
     // now convert NTP time into everyday time:
-    //Serial.print("Unix time = ");
+//    Serial.print("Unix time = ");
     // Unix time starts on Jan 1 1970. In seconds, that's 2208988800:
     const unsigned long seventyYears = 2208988800UL;
     // subtract seventy years:
     unsigned long epoch = secsSince1900 - seventyYears;
     // print Unix time:
-    Serial.println(epoch);
+//    Serial.println(epoch);
   
   return epoch;
 }
@@ -162,43 +167,62 @@ boolean updateAltera(byte hour, byte minute, byte second){
   */
 //this is essentially just 3 bytes of data to send serially.
   //send MSB first for all bytes
-Serial.println("Time sent: ");
-  sendSerial(hour);
-  Serial.print(hour, DEC);
-  Serial.print(":");
-  sendSerial(minute);
-  Serial.print(minute, DEC);
-  Serial.print(":");
-  sendSerial(second);
-  Serial.println(second, DEC);
+  Serial.print("Time sent: ");
 
+  Wire.beginTransmission(FPGA_ADDRESS);
+  Wire.write(hours_addr);
+  Wire.endTransmission();
+  
+  Wire.beginTransmission(FPGA_ADDRESS);
+  Wire.write(hour);
+  Wire.endTransmission();
+
+  Wire.beginTransmission(FPGA_ADDRESS);
+  Wire.write(min_addr);
+  Wire.endTransmission();
+  
+  Wire.beginTransmission(FPGA_ADDRESS);
+  Wire.write(minute);
+  Wire.endTransmission();
+
+  Wire.beginTransmission(FPGA_ADDRESS);
+  Wire.write(sec_addr);
+  Wire.endTransmission();
+  
+  Wire.beginTransmission(FPGA_ADDRESS);
+  Wire.write(second);
+  Wire.endTransmission();
+  
+  Serial.println("Time transmitted: ");
+  
+  Serial.print(hour, BIN);
+  Serial.print(" ");
+
+  Serial.print(minute, BIN);
+  Serial.print(" ");
+
+  Serial.println(second, BIN);
+  Serial.println(" ");
 }
 
 byte reformatHour(unsigned long unixTime){
-  byte hour = ((unixTime  % 86400L) / 3600) - 4;
-  Serial.print("Hour: ");
-  Serial.println(hour, DEC);
+  byte hour = (((unixTime - (4 * 3600))  % 86400L) / 3600);
+  Serial.print("Time: ");
+  Serial.print(hour, DEC);
   return hour;
 }
 
 byte reformatMinute(unsigned long unixTime){
   byte minute = (unixTime  % 3600) / 60; // get the minute (3600 equals secs per minute)
-  Serial.println("Minute: ");
-  Serial.println(minute, DEC);
+  Serial.print(":");
+  Serial.print(minute, DEC);
   return minute;
 }
 
 byte reformatSecond(unsigned long unixTime){
   byte second = unixTime % 60;
-  Serial.println("Second: ");
+  Serial.print(":");
   Serial.println(second, DEC);
   return second;
-}
-
-void sendSerial(byte data){
-  Wire.beginTransmission(FPGA_ADDRESS);
-  Wire.write(data);
-  Wire.endTransmission();
-  
 }
 
