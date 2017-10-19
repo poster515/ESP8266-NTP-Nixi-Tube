@@ -15,11 +15,11 @@ The Altera board processes this data, which is just three unsigned integers, and
 These six, 4-bit outputs are used to control CD4028 high-voltage decoders, which then control Nixi tubes.
 Altera FPGA Decoder Simulation Results:
 
-[[.pics/sim_results]]
+[[.pics/sim_results.png]]
 
 Altera FPGA Overall Simulation Results:
 
-[[.pics/main_DSP_sim]]
+[[.pics/main_DSP_sim.png]]
 
 And there you have it!
 
