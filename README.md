@@ -19,7 +19,7 @@ Altera FPGA Decoder Simulation Results:
 
 Altera FPGA Overall Simulation Results:
 
-[[./pics/main_DSP_sim.png]]
+[[ESP8266-NTP-Nixi-Tube/pics/main_DSP_sim.png]]
 
 And there you have it!
 
