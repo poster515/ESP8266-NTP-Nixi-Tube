@@ -1,4 +1,4 @@
-ESP8266-NTP-Nixi-Tube
+# ESP8266 and Nixi Tubes
 
 This repository contains all the files necessary to hook up an Altera FPGA to an Adafruit Huzzah.
 
