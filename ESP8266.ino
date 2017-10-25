@@ -1,29 +1,36 @@
 /*
- This code is meant for the Adafruit Huzzah. It will perdiodically ask 
- */
+ This code is meant for the Adafruit Huzzah. It will perdiodically ping a NIST NTP server for time,
+ process the unsigned long data returned by the server. This code will use that unsigned long data
+ to compute the hours, minutes, and seconds of the current time of day.
+
+ Future improvements include implementing a more streamlined I2C program on the I2C slave, and possibly
+ revisiting my timeout functionality on the NTP request.
+ */ 
 
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <Wire.h>
-#define ZEROES 0x00
+#include <ESP.h>
+
+#define TIMEOUT 100
 #define FPGA_REGISTER 0x1111111 // Hexadecima address for the Altera FPGA internal register.
 
-char ssid[] = "XXXXXXXX";       //  your network SSID (name)
-char pass[] = "XXXXXXXX";    // your network password
+char ssid[] = "Never Rong";       //  your network SSID (name)
+char pass[] = "Sixty_2_Sixteen";    // your network password
  
 
 unsigned int localPort = 2390;      // local port to listen for UDP packets
 
 //GPIO 4 and 5 are I2C SDA and SCL respectively
-int ESP8266_SCL = 5; //not actually sure Wire.h needs these
+int ESP8266_SCL = 5;
 int ESP8266_SDL = 4;
 
 //preamble for FPGA detection
 uint8_t FPGA_ADDRESS = 127; //0x1111111
 
-uint8_t hours_addr = 252; //0x11111100 - hours register on FPGA
-uint8_t min_addr = 253;   //0x11111101 - mins register on FPGA
-uint8_t sec_addr = 255;   //0x11111111 - secs register in FPGA
+uint8_t hours_addr = 252; //0x11111100
+uint8_t min_addr = 253;   //0x11111101
+uint8_t sec_addr = 255;   //0x11111111
 
 /* Don't hardwire the IP address or we won't get the benefits of the pool.
  *  Lookup the IP address for the host name instead */
@@ -33,6 +40,7 @@ IPAddress timeServerIP; // time.nist.gov NTP server address
 const char* ntpServerName = "time.nist.gov";
 
 const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
+int time_since_reset = 0; //used for dropped packets/timeouts
 
 byte packetBuffer[ NTP_PACKET_SIZE ]; //buffer to hold incoming and outgoing packets
 
@@ -43,8 +51,6 @@ WiFiUDP udp;
 byte formattedHour;
 byte formattedMinute;
 byte formattedSecond;
-String h;
-byte zeroes = 0x00;
 
 void setup()
 {
@@ -74,7 +80,9 @@ void setup()
   udp.begin(localPort);
   //Serial.print("Local port: ");
   //Serial.println(udp.localPort());
+
 }
+
 byte reformatHour(unsigned long unixTime);
 byte reformatMinute(unsigned long unixTime);
 byte reformatSecond(unsigned long unixTime);
@@ -88,7 +96,7 @@ void loop()
   byte formattedSecond = reformatSecond(unixTime);
   
   updateAltera(formattedHour, formattedMinute, formattedSecond);
-  
+  wdt_reset();
 }
 
 unsigned long getTime(){
@@ -102,12 +110,19 @@ unsigned long getTime(){
   int cb = udp.parsePacket();
   while (!cb) {
     cb = udp.parsePacket();
-    //Serial.println("no packet yet");
+    Serial.println("no packet yet");
     //do nothing, no packet yet
+    time_since_reset++;
+    if( time_since_reset >= TIMEOUT){
+      //try again
+      sendNTPpacket(timeServerIP); // send an NTP packet to a time server
+      time_since_reset = 0;
+      Serial.println("Timed out!");
+    }
   }
   
-    //Serial.print("packet received, length=");
-    //Serial.println(cb);
+    Serial.print("packet received, length=");
+    Serial.println(cb);
     // We've received a packet, read the data from it
     udp.read(packetBuffer, NTP_PACKET_SIZE); // read the packet into the buffer
 
@@ -169,40 +184,40 @@ boolean updateAltera(byte hour, byte minute, byte second){
   //send MSB first for all bytes
   Serial.print("Time sent: ");
 
-  Wire.beginTransmission(FPGA_ADDRESS); //acknowledge this can be prettier. need to implement a 
-  Wire.write(hours_addr);               //'continue write' function on FPGA
+  Wire.beginTransmission(FPGA_ADDRESS);
+  Wire.write(hours_addr);
   Wire.endTransmission();
-  
+  delay (50);
   Wire.beginTransmission(FPGA_ADDRESS);
   Wire.write(hour);
   Wire.endTransmission();
-
+  delay (50);
   Wire.beginTransmission(FPGA_ADDRESS);
   Wire.write(min_addr);
   Wire.endTransmission();
-  
+  delay (50);
   Wire.beginTransmission(FPGA_ADDRESS);
   Wire.write(minute);
   Wire.endTransmission();
-
+  delay (50);
   Wire.beginTransmission(FPGA_ADDRESS);
   Wire.write(sec_addr);
   Wire.endTransmission();
-  
+  delay (50);
   Wire.beginTransmission(FPGA_ADDRESS);
   Wire.write(second);
   Wire.endTransmission();
-  
+  delay (50);
   Serial.println("Time transmitted: ");
-  
-  Serial.print(hour, BIN);
-  Serial.print(" ");
-
-  Serial.print(minute, BIN);
-  Serial.print(" ");
-
-  Serial.println(second, BIN);
-  Serial.println(" ");
+//  
+//  Serial.print(hour, DEC);
+//  Serial.print(" ");
+//
+//  Serial.print(minute, DEC);
+//  Serial.print(" ");
+//
+//  Serial.println(second, DEC);
+//  Serial.println(" ");
 }
 
 byte reformatHour(unsigned long unixTime){
