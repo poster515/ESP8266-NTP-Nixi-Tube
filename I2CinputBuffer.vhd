@@ -1,20 +1,16 @@
 -- Written by Joe Post
 
--- It will receive 32 total bits of data:
-
--- | 7-bit address | 24-bit payload | <- data_in
--- MSB 										LSB
---in(31)										in(0)
-
--- 24-bit payload:
+-- It will receive a 24-bit payload:
 
 -- | 8-bit hour | 8-bit minute | 8-bit second |
--- MSB 													LSB
---in(23)													in(0)
+-- MSB 					     LSB
+--in(23)				     in(0)
 
 --each 8-bit byte is just a BCD integer.
 
---output is just a resetn signal.
+--output is just a resetn signal which flashes the output drivers to modulate the display and save energy.
+
+--Credit for a majority of this source goes to Peter Samarin: https://github.com/oetr/FPGA-I2C-Slave/blob/master/I2C_slave.vhd
 
 library ieee;
 use ieee.std_logic_1164.all;
