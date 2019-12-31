@@ -15,8 +15,8 @@
 #define TIMEOUT 100
 #define FPGA_REGISTER 0x1111111 // Hexadecima address for the Altera FPGA internal register.
 
-char ssid[] = "Never Rong";       //  your network SSID (name)
-char pass[] = "Sixty_2_Sixteen";    // your network password
+char ssid[] = "";    //  your network SSID (name)
+char pass[] = "";    // your network password
  
 
 unsigned int localPort = 2390;      // local port to listen for UDP packets
